@@ -28,20 +28,12 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.GregorianCalendar;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
 import com.clickhouse.client.ClickHouseConfig;
 import com.clickhouse.client.ClickHouseResponse;
-import com.clickhouse.data.ClickHouseColumn;
-import com.clickhouse.data.ClickHouseRecord;
-import com.clickhouse.data.ClickHouseUtils;
-import com.clickhouse.data.ClickHouseValue;
+import com.clickhouse.data.*;
+import com.clickhouse.data.value.ClickHouseStringValue;
 
 public class ClickHouseResultSet extends AbstractResultSet {
     private ClickHouseRecord currentRow;
@@ -130,8 +122,25 @@ public class ClickHouseResultSet extends AbstractResultSet {
             this.columns = response.getColumns();
             this.metaData = new ClickHouseResultSetMetaData(conn.getJdbcConfig(), database, table, columns, this.mapper,
                     defaultTypeMap);
-
-            this.rowCursor = response.records().iterator();
+            List<ClickHouseRecord> myRecs = new ArrayList<>();
+            int totCols = response.getColumns().size();
+            ClickHouseValue[] chValues = new ClickHouseValue[totCols];
+            int i=0;
+            for(ClickHouseRecord orig : response.records()){
+                for(ClickHouseColumn col : response.getColumns()){
+                    ClickHouseValue origValue = orig.getValue(col.getColumnName());
+                    if(col.getDataType().toString().equals("String")){
+                        String origStr = origValue.asString();
+                        ClickHouseStringValue modified = ClickHouseStringValue.of(origStr.toUpperCase());
+                        chValues[i]=modified;
+                    }else {
+                        chValues[i]=orig.getValue(col.getColumnName());
+                    }
+                    i++;
+                }
+                myRecs.add(ClickHouseSimpleRecord.of(response.getColumns(),  chValues));
+            }
+            this.rowCursor = myRecs.iterator();
         } catch (Exception e) {
             throw SqlExceptionUtils.handle(e);
         }

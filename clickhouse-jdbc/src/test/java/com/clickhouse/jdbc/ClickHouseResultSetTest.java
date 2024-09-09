@@ -170,6 +170,18 @@ public class ClickHouseResultSetTest extends JdbcIntegrationTest {
     }
 
     @Test(groups = "integration")
+    public void testBasicSelect() throws SQLException{
+        try (ClickHouseConnection conn = newConnection(new Properties());
+             Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery("SELECT 'ClickHouse' as  name, 33 as age, 'usa' as country;");
+            Assert.assertTrue(rs.next());
+            Assert.assertEquals(rs.getString(1),"CLICKHOUSE");
+            Assert.assertEquals(rs.getInt(2),33);
+            Assert.assertEquals(rs.getString(3),"USA");
+        }
+    }
+
+    @Test(groups = "integration")
     public void testArray() throws SQLException {
         try (ClickHouseConnection conn = newConnection(new Properties());
                 Statement stmt = conn.createStatement()) {
